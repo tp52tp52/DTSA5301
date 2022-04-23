@@ -16,9 +16,13 @@ library(dplyr)
 ```
 
 In this project, I take a look at total COVID 19 cases in all the countries in the world. 
+### Question of interest
+Using this data set, I want to see how COVID 19 spreads over the time over the world in general and in Australia specifically. Additionally, is the number of death per thousand related to the number of cases per thousand? Can we predict the number of death based on the number of cases?
 
 # DATA IMPORT
-I will start by reading in the data from the four main csv files
+I will start by reading in the data from the four main csv files. 
+### Source of data: 
+The data is published on GitHub by Johns Hopkins University. 
 
 ```{r get_jhu_data}
 ## Get current data in the four files
@@ -31,7 +35,7 @@ urls <- str_c(url_in, file_names)
 
 ```
 
-Let's read in the data and see what we have 
+Let's read in the data and see what we have. 
 
 ```{r import_data, message=FALSE}
 global_cases <- read_csv(urls[1])
@@ -43,6 +47,12 @@ US_cases
 US_deaths <- read_csv(urls[4])
 US_deaths
 ```
+
+### Description of data
+There are 4 data sets: global cases, global deaths, US cases, and US deaths. Each data set has the following columns: Province/State, Country/Region, Lat, Long, and hundreds of date columns. 
+
+In the global deaths and cases data sets, we have many different countries recorded. In the US deaths and cases, there are cases in all states in the US recorded. 
+
 
 After looking at global_cases and global_deaths, I would like to tidy those datasets and put each variable (date, cases, deaths) in their own column. 
 
@@ -248,6 +258,8 @@ global_tot_w_pred %>% ggplot() +
   geom_point(aes(x = cases_per_thou, y = pred), color = "red")
 
 ```
+# CONCLUSION
+As we can see from the plots above, COVID cases and deaths over the world and in Australia have been both increasing over the time. We reached the highest new cases per day ever in January 2022. In Australia, the line go almost straight up 45 degree since July. The model shows a linear line of relationship between cases per thousand and deaths per thousand. Looking at the real data points, we can see that the line is relevant. 
 
 # BIAS
 There can be a bias in how the data has been collected. For example, people who go to hospital or report to workplace are more likely to be included in the data. On the other hand, people who live in the countryside, elders who stay at home almost all the time are less likely to be recorded. It also depends on which testing sides that are used to collect the data and it's different all over countries. The correct case number may be much higher than this, depending on how correctly each country records their cases. 
