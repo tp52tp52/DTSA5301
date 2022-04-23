@@ -1,0 +1,123 @@
+---
+title: "NYPDShooting"
+author: "TP"
+date: "4/15/2022"
+output:
+  pdf_document: default
+  html_document: default
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+library(tidyverse)
+library(lubridate)
+library(ggplot2)
+library(dplyr)
+```
+
+In this data report, I will import the NYPD Shooting Incident data, visualize and analyze that data, build a model, and identify different biases. 
+
+### Question of interest
+For this data set, I'm especially curious about the relationship between murder status and victims. Who are the most vulnerable during shooting incidents in New York based on this data set based on victims' gender, age, and race? 
+
+# Importing Data
+The data is downloaded from NYPD OpenData. The data file is in csv format. 
+```{r get_data}
+url_in <- "https://data.cityofnewyork.us/api/views/833y-fsy8/rows.csv?accessType=DOWNLOAD"
+```
+
+```{r import_data, message=FALSE}
+shooting_cases <- read_csv(url_in)
+head(shooting_cases)
+summary(shooting_cases)
+```
+
+There are 23,585 incidents reported in the data set. Each incident is associated with a incident key. The date, time, location, shooters' information (age, race, gender), victims' information (age, race, gender), precinct, jurisdiction code, statistical murder flag, x coordination, y coordination, latitude, longitude, lon_lat of each incident were reported. In total, there are 19 data features in the data set. 
+
+There are missing data in LOCATION_DESC, PERP_AGE_GROUP, PERP_SEX, PERP_RACE. The missing data in LOCATION_DESC may be due to the locations of the incidents are not classified in the system and the missing shooters' information may be due to the fact that the shooters have not caught or died during the incidents. 
+
+```{r tidy_data}
+shooting_cases <- shooting_cases %>% 
+  select(-c(PRECINCT, LOCATION_DESC, PERP_AGE_GROUP, PERP_SEX, JURISDICTION_CODE,
+              PERP_RACE, X_COORD_CD, Y_COORD_CD, Latitude, Longitude, Lon_Lat)) %>%
+  mutate(OCCUR_DATE = mdy(OCCUR_DATE))
+shooting_cases
+summary(shooting_cases)
+
+```
+
+# Visualization and Analysis
+```{r visualization_and_analysis}
+# Visualization and analysis 1: Where has the most and the least number of shooting cases in New York
+shooting_case_plot <- ggplot(shooting_cases, aes(x = BORO)) + geom_bar() + 
+  labs(title = "Shooting Cases in New York by Boroughs", x = "Boroughs", y = "Number of Cases") +
+  theme_minimal()
+
+shooting_case_plot
+```
+
+Analysis: From the plot above, we can see that Brooklyn has the highest number of shooting incidents (about 9000 cases) and Staten Island has the lowest number of incidents (about 600 cases). 
+
+```{r table_visualization}
+murder_boolean <- shooting_cases$STATISTICAL_MURDER_FLAG
+murders <- filter(shooting_cases, murder_boolean=='TRUE')
+murder_by_boro <- table(t(murders$BORO))
+not_murder<-filter(shooting_cases, murder_boolean=='FALSE')
+not_murder_by_boro <- table(t(not_murder$BORO))
+combined_murder_notMurder <- rbind(murder_by_boro, not_murder_by_boro)
+
+table(shooting_cases$BORO, shooting_cases$STATISTICAL_MURDER_FLAG) 
+barplot(combined_murder_notMurder)
+```
+
+Analysis: From the table and plot above, we can see that murder cases (darker part) take a small part of total shooting cases (lighter part). 
+
+```{r visualization_and_analysis_race}
+# Visualize race of victims
+shooting_case_race_plot <- ggplot(shooting_cases, aes(x = VIC_RACE)) + geom_bar() + 
+  labs(title = "Shooting Cases in New York by Races", x = "Races", y = "Number of Cases") +
+  theme_minimal()
+
+shooting_case_race_plot
+```
+Analysis: From the plot above, we can see that the victims are mainly Black with more than half of the total cases. The second highest is White Hispanic. Pacific Islanders and American Indian/Alaskans make up a small number of cases. 
+
+This raises the question of why Black people make up so many cases of shooting. Does Black have the highest number of population in New York? Do the shootings usually happen where Black people live? 
+
+```{r visualization_and_analysis_gender}
+# Visualize genders of victims
+shooting_case_gender_plot <- ggplot(shooting_cases, aes(x = VIC_SEX)) + geom_bar() + 
+  labs(title = "Shooting Cases in New York by Gender", x = "Genders", y = "Number of Cases") +
+  theme_minimal()
+
+shooting_case_gender_plot
+```
+Analysis: From the gender plot above, we can see that about 90% of victims are male and about 10% of victims are female. Unknown gender makes up a very small number. 
+
+```{r visualization_and_analysis_age}
+# Visualize age groups of victims
+shooting_case_age_plot <- ggplot(shooting_cases, aes(x = VIC_AGE_GROUP)) + geom_bar() + 
+  labs(title = "Shooting Cases in New York by Age", x = "Age Groups", y = "Number of Cases") +
+  theme_minimal()
+
+shooting_case_age_plot
+```
+
+Analysis: Top two victim age groups are 18-24 and 25-44. A very small number of victims are older than 65. 
+
+# Model 
+In this logistic regression model, the independent variables will be VIC_AGE_GROUP, VIC_SEX, VIC_RACE, and dependent variable will be STATISTICAL_MURDER_FLAG. I will to see if the age, gender, and race of the victims affect the murder status. 
+
+```{r model}
+mod <- glm(STATISTICAL_MURDER_FLAG ~ VIC_AGE_GROUP + VIC_SEX + VIC_RACE, data = shooting_cases, family='binomial')
+summary(mod)
+
+```
+
+The model summary shows that victims in younger ages (< 25 years old) are more likely to survive after the shooting. The probability of surviving is decreasing as the ages get increased. And victims in older ages (65+) are less likely to survive. 
+
+# Conclusion and Bias
+
+The data set shows us that Brooklyn has the highest number of shooting incidents and Staten Island has the lowest number of incidents in New York. Victims are mainly Black and male, between the age of 18-44. The model shows that victims' ages affect the murder status or surviving rate. There is potential for biases occurring here in the data set and model. The given data set are highly specific in one area of New York which is Brooklyn and the victim are mainly Black. The data set is highly imbalanced. 
+
+sessionInfo()
